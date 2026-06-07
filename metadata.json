@@ -1,0 +1,6 @@
+{
+  "name": "HonorLex",
+  "description": "An academic writing assistant for editing, paraphrasing, restructuring, and correcting English texts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
