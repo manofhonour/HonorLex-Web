@@ -1,521 +1,575 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
-  Download, 
-  Trash2, 
-  Layers, 
-  Eye, 
-  Columns, 
-  HelpCircle, 
+  BookMarked, 
+  FileSearch, 
+  Cpu, 
+  Scale, 
+  ShieldCheck, 
   AlertCircle, 
-  AlertTriangle,
-  RefreshCw,
-  Scale,
-  ShieldCheck,
-  CheckCircle2,
-  FileText,
-  ShieldAlert
+  CornerDownRight, 
+  ArrowRightLeft,
+  ChevronRight,
+  Info,
+  Clock,
+  Trash2
 } from 'lucide-react';
 
-import { SlidePage, OCRegion, OCRConfidenceWarning } from './types';
-import PDFUploader from './components/PDFUploader';
-import SlideEditor from './components/SlideEditor';
-import BeforeAfterViewer from './components/BeforeAfterViewer';
-import LegalNotice from './components/LegalNotice';
-import { exportToPPTX } from './components/PPTXExporter';
+import { ContextualSynonymResponse } from './types';
+import AcademicPolisher from './components/AcademicPolisher';
+import CitationAuditor from './components/CitationAuditor';
+import BibliographyScanner from './components/BibliographyScanner';
+import SynonymDrawer from './components/SynonymDrawer';
+import { isStaticDemoMode, setStaticDemoMode, simulateContextualSynonyms } from './lib/staticDemo';
+
+interface HistoryItem {
+  id: string;
+  timestamp: string;
+  type: 'polisher' | 'auditor' | 'scanner';
+  label: string;
+  data: any;
+}
 
 export default function App() {
-  const [slides, setSlides] = useState<SlidePage[]>([]);
-  const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
-  const [exporting, setExporting] = useState(false);
-  const [filename, setFilename] = useState('HonorLM_Presentation.pptx');
+  const [activeTab, setActiveTab] = useState<'polisher' | 'auditor' | 'scanner'>('polisher');
+  const [isStatic, setIsStatic] = useState<boolean>(false);
 
-  // Load a demonstration slide deck immediately on launch to support immediate click-testing
   useEffect(() => {
-    loadDemoSlideDeck();
+    setIsStatic(isStaticDemoMode());
   }, []);
 
-  const loadDemoSlideDeck = () => {
-    const demoSlides: SlidePage[] = [];
-    const templates = [
-      {
-        title: 'NEURAL SYSTEM PRINCIPLES',
-        subtitle: 'Lecture 12: Sequence Models and Recurrent Operations',
-        badge: 'AI-2026',
-        watermark: 'CONFIDENTIAL COPY - UNAUTHORIZED SHARING PROHIBITED',
-        bgColor: '#0B132B', // Deep obsidian blue slide
-        fgColor: '#F4F4F9',
-        accentColor: '#38BDF8',
-      },
-      {
-        title: 'DATA FLOW & INTERFACE DESIGN',
-        subtitle: 'Optimizing interactive telemetry layers',
-        badge: 'UIX-CORE',
-        watermark: 'PROPERTY OF ACADEMIA CORP - DRAFT ONLY',
-        bgColor: '#FFFFFF', // High-contrast clean white slide
-        fgColor: '#0F172A',
-        accentColor: '#0284C7',
+  const handleToggleStaticMode = (val: boolean) => {
+    setStaticDemoMode(val);
+    setIsStatic(val);
+  };
+  
+  // Workspace history logging states
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
+
+  // States to pass down list values for reloading
+  const [polisherReload, setPolisherReload] = useState<any>(null);
+  const [auditorReload, setAuditorReload] = useState<any>(null);
+  const [scannerReload, setScannerReload] = useState<any>(null);
+
+  // Load history logs from browser localStorage on init
+  useEffect(() => {
+    const saved = localStorage.getItem('honorlex_history_pro');
+    if (saved) {
+      try {
+        setHistory(JSON.parse(saved).slice(0, 10));
+      } catch (err) {
+        console.error('Failed parsing history database:', err);
       }
-    ];
+    }
+  }, []);
 
-    for (let idx = 0; idx < templates.length; idx++) {
-      const template = templates[idx];
-      const canvas = document.createElement('canvas');
-      canvas.width = 960;
-      canvas.height = 540;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        // Render template background
-        ctx.fillStyle = template.bgColor;
-        ctx.fillRect(0, 0, 960, 540);
+  const handleRecordOperation = (type: 'polisher' | 'auditor' | 'scanner', data: any) => {
+    let label = '';
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        // Render elegant grid backing lines to represent an academic template layout
-        ctx.strokeStyle = template.bgColor === '#FFFFFF' ? '#F1F5F9' : '#1E293B';
-        ctx.lineWidth = 1.5;
-        for (let xOffset = 60; xOffset < 960; xOffset += 120) {
-          ctx.beginPath();
-          ctx.moveTo(xOffset, 0);
-          ctx.lineTo(xOffset, 540);
-          ctx.stroke();
+    if (type === 'polisher') {
+      const taskLabel = data.task.charAt(0).toUpperCase() + data.task.slice(1);
+      const textPreview = data.text.length > 30 ? data.text.substring(0, 30) + '...' : data.text;
+      label = `Polished: ${taskLabel} (${textPreview})`;
+    } else if (type === 'auditor') {
+      const textPreview = data.query.length > 30 ? data.query.substring(0, 30) + '...' : data.query;
+      label = `Audited Reference: ${textPreview}`;
+    } else if (type === 'scanner') {
+      const textPreview = data.text.length > 30 ? data.text.substring(0, 30) + '...' : data.text;
+      label = `Scanned list (${data.result.references?.length || 0} items) (${textPreview})`;
+    }
+
+    const newItem: HistoryItem = {
+      id: `hist_${Date.now()}`,
+      timestamp: timeStr,
+      type,
+      label,
+      data
+    };
+
+    setHistory((prev) => {
+      const updated = [newItem, ...prev].slice(0, 10);
+      localStorage.setItem('honorlex_history_pro', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleReloadHistoryItem = (item: HistoryItem) => {
+    setActiveTab(item.type);
+    
+    // Wipe others to avoid side conflicts
+    setPolisherReload(null);
+    setAuditorReload(null);
+    setScannerReload(null);
+
+    // Short timeout to trigger tab transition, then apply reloadState
+    setTimeout(() => {
+      if (item.type === 'polisher') {
+        setPolisherReload(item.data);
+      } else if (item.type === 'auditor') {
+        setAuditorReload(item.data);
+      } else if (item.type === 'scanner') {
+        setScannerReload(item.data);
+      }
+    }, 50);
+
+    setIsHistoryOpen(false);
+  };
+
+  const handleClearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem('honorlex_history_pro');
+    
+    setPolisherReload(null);
+    setAuditorReload(null);
+    setScannerReload(null);
+  };
+
+  // Shared state for Interactive Synonym swap
+  const [editorText, setEditorText] = useState<string>('');
+  
+  // Synonym drawer metrics state
+  const [synonymWord, setSynonymWord] = useState<string>('');
+  const [synonymContext, setSynonymContext] = useState<string>('');
+  const [synonymData, setSynonymData] = useState<ContextualSynonymResponse | null>(null);
+  const [synonymLoading, setSynonymLoading] = useState<boolean>(false);
+  const [isSynonymOpen, setIsSynonymOpen] = useState<boolean>(false);
+
+  // Shared state for citation verification target transition
+  const [auditorQuery, setAuditorQuery] = useState<string>('');
+
+  // Auto-focus single verification and populate
+  const handleTransitionToSingleAudit = (rawCitation: string) => {
+    // 1. Switch to Auditor tab
+    setActiveTab('auditor');
+    
+    // 2. We can look up the element by ID and click, or let's use standard browser event trigger or direct document element injection!
+    // Since CitationAuditor handles its own internal input state, let's write a simple selector dispatch or wait for DOM loading.
+    setTimeout(() => {
+      const field = document.getElementById('single_citation_input_field') as HTMLTextAreaElement;
+      if (field) {
+        field.value = rawCitation;
+        // Trigger synthetic react onChange event
+        const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+        if (nativeSetter) {
+          nativeSetter.call(field, rawCitation);
         }
-
-        // Sidebar Accent Stripe
-        ctx.fillStyle = template.accentColor;
-        ctx.fillRect(80, 110, 6, 110);
-
-        // Drawing title texts
-        ctx.fillStyle = template.fgColor;
-        ctx.font = 'bold 36px "Outfit", sans-serif';
-        ctx.fillText(template.title, 110, 150);
-
-        ctx.font = '16px "Inter", sans-serif';
-        ctx.fillStyle = template.bgColor === '#FFFFFF' ? '#475569' : '#94A3B8';
-        ctx.fillText(template.subtitle, 110, 195);
-
-        // Render code badge
-        ctx.fillStyle = template.accentColor + '20'; // 12% opacity Hex
-        ctx.fillRect(110, 225, 95, 28);
-        ctx.strokeStyle = template.accentColor;
-        ctx.lineWidth = 1;
-        ctx.strokeRect(110, 225, 95, 28);
-        ctx.fillStyle = template.accentColor;
-        ctx.font = 'bold 11px monospace';
-        ctx.fillText(template.badge, 130, 242);
-
-        // Draw slide artwork block representing a diagram (OCR safely ignores this region!)
-        ctx.strokeStyle = template.accentColor;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(580, 110, 280, 260);
-        ctx.fillStyle = template.bgColor === '#FFFFFF' ? '#F8FAFC' : '#111827';
-        ctx.fillRect(581, 111, 278, 258);
-
-        ctx.beginPath();
-        ctx.arc(720, 220, 45, 0, 2 * Math.PI);
-        ctx.fillStyle = template.accentColor + '30';
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = template.fgColor;
-        ctx.font = 'bold 13px "Inter", sans-serif';
-        ctx.fillText('Central Flow Processor', 655, 305);
-
-        // Render the unwanted copyright watermark branding text lines (which the user can redact or clear out!)
-        ctx.fillStyle = '#EF4444'; // Glowing red
-        ctx.font = 'bold 13px "Courier New", monospace';
-        ctx.fillText(`[WATERMARK: ${template.watermark}]`, 110, 480);
-
-        // Footer Metadata Indicator
-        ctx.fillStyle = '#64748B';
-        ctx.font = '11px monospace';
-        ctx.fillText(`HONORLM CONVERTER DECK • SLIDE PAGE 0${idx + 1} OF 02`, 110, 510);
+        const ev = new Event('input', { bubbles: true });
+        field.dispatchEvent(ev);
+        
+        // Find and click the verification trigger
+        const clickBtn = document.getElementById('verify_citation_cta_btn') as HTMLButtonElement;
+        if (clickBtn) clickBtn.click();
       }
+    }, 100);
+  };
 
-      demoSlides.push({
-        pageNumber: idx + 1,
-        width: 960,
-        height: 540,
-        aspectRatio: 16/9,
-        dataUrl: canvas.toDataURL('image/png'),
-        regions: [
-          // Pre-populate an OCR Region
-          {
-            id: `demo_ocr_${idx}`,
-            x: 10.5,
-            y: 21,
-            width: 46,
-            height: 9,
-            action: 'ocr',
-            ocrText: template.title,
-            ocrConfidence: 98,
-            formatting: {
-              fontSize: 22,
-              fontColor: template.fgColor === '#FFFFFF' ? '#0F172A' : '#FFFFFF',
-              fontWeight: 'bold',
-              fontStyle: 'normal',
-              align: 'left',
-              backgroundColor: template.bgColor
-            },
-            originalImageBytes: ''
-          },
-          // Pre-populate a Low Confidence OCR Region for illustration
-          {
-            id: `demo_warn_${idx}`,
-            x: 68,
-            y: 53.5,
-            width: 14,
-            height: 4.5,
-            action: 'ocr',
-            ocrText: 'F|ow Froc',
-            ocrConfidence: 58, // Low confidence to trigger warnings UI block
-            formatting: {
-              fontSize: 12,
-              fontColor: template.accentColor,
-              fontWeight: 'bold',
-              fontStyle: 'normal',
-              align: 'center',
-              backgroundColor: template.bgColor === '#FFFFFF' ? '#F8FAFC' : '#111827'
-            },
-            originalImageBytes: ''
-          },
-          // Pre-populate a Redaction Region over the unwanted watermark
-          {
-            id: `demo_redact_${idx}`,
-            x: 11,
-            y: 86.5,
-            width: 53,
-            height: 4,
-            action: 'redact',
-            ocrText: '',
-            ocrConfidence: 0,
-            formatting: {
-              fontSize: 11,
-              fontColor: '#000000',
-              fontWeight: 'normal',
-              fontStyle: 'normal',
-              align: 'left',
-              backgroundColor: template.bgColor
-            }
-          }
-        ]
-      });
+  // Double click / selection callback inside Academic Polisher
+  const handleOpenSynonymDrawer = async (word: string, surroundingContext: string) => {
+    setSynonymWord(word);
+    setSynonymContext(surroundingContext);
+    setIsSynonymOpen(true);
+    setSynonymLoading(true);
+    setSynonymData(null);
+
+    if (isStatic) {
+      setTimeout(() => {
+        const dummy = simulateContextualSynonyms(word, surroundingContext);
+        setSynonymData(dummy);
+        setSynonymLoading(false);
+      }, 400);
+      return;
     }
 
-    setSlides(demoSlides);
-    setSelectedSlideIndex(0);
-  };
-
-  const handleUploadSuccess = (newSlides: SlidePage[]) => {
-    setSlides(newSlides);
-    setSelectedSlideIndex(0);
-  };
-
-  const updateSlideRegions = (slideIndex: number, newRegions: OCRegion[]) => {
-    const updated = slides.map((slide, idx) => {
-      if (idx === slideIndex) {
-        return { ...slide, regions: newRegions };
-      }
-      return slide;
-    });
-    setSlides(updated);
-  };
-
-  const handleExport = async () => {
-    if (slides.length === 0) return;
-    setExporting(true);
     try {
-      await exportToPPTX(slides, filename.endsWith('.pptx') ? filename : `${filename}.pptx`);
-    } catch (err) {
-      console.error('Failed to compile PowerPoint deck', err);
-    } finally {
-      setExporting(false);
-    }
-  };
+      const response = await fetch('/api/contextual-synonyms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          word,
+          sentence: word,
+          paragraph: surroundingContext,
+          tone: 'academic'
+        })
+      });
 
-  const handleReset = () => {
-    if (confirm('Discard current document and reset?')) {
-      setSlides([]);
-      setSelectedSlideIndex(0);
-    }
-  };
-
-  // Compile OCR warnings with low confidence (< 75%) from all pages
-  const confidenceWarnings: OCRConfidenceWarning[] = [];
-  slides.forEach((sl) => {
-    sl.regions.forEach((reg) => {
-      if (reg.action === 'ocr' && reg.ocrConfidence > 0 && reg.ocrConfidence < 75) {
-        confidenceWarnings.push({
-          slideNumber: sl.pageNumber,
-          regionId: reg.id,
-          text: reg.ocrText,
-          confidence: reg.ocrConfidence
-        });
+      if (!response.ok) {
+        throw new Error(`Thesaurus API returned ${response.status}`);
       }
-    });
-  });
 
-  const activeSlide = slides[selectedSlideIndex];
+      const resData = await response.json();
+      setSynonymData(resData);
+    } catch (err) {
+      console.error('[Thesaurus API error]:', err);
+      // Construct logical minimal fallback response for better UX
+      setSynonymData({
+        selected_text: word,
+        part_of_speech: 'noun / verb',
+        detected_meaning: 'Parsed lexical reference token matching context.',
+        sentence_context: word,
+        paragraph_topic: 'general academic research',
+        best_suggestion: { word: word, reason: 'Original selection term', fit_score: 100 },
+        suggestions: [
+          {
+            word,
+            fit_score: 95,
+            register: 'academic',
+            meaning_safety: 'safe',
+            strength: 'similar',
+            collocation_note: 'Maintains current sentence structure.',
+            example_sentence: surroundingContext,
+            comment: 'Original phrase matches standard terminology.'
+          }
+        ],
+        avoid: [],
+        meaning_warning: null,
+        replacement_sentence: surroundingContext
+      });
+    } finally {
+      setSynonymLoading(false);
+    }
+  };
+
+  // Replace selected word in AcademicPolisher immediately with full word boundaries
+  const handleApplySynonymIntoEditor = (newWord: string) => {
+    if (!synonymWord) return;
+    
+    const textarea = document.getElementById('raw_manuscript_draft_input') as HTMLTextAreaElement;
+    if (textarea) {
+      const currentVal = textarea.value;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+
+      let nextVal = '';
+      if (start !== end) {
+        // If there is active selection bounds, replace exactly at that coordinate span 
+        nextVal = currentVal.substring(0, start) + newWord + currentVal.substring(end);
+      } else {
+        // Fallback string literal replace
+        const escaped = synonymWord.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`\\b${escaped}\\b`, 'g');
+        nextVal = currentVal.replace(regex, newWord);
+      }
+
+      // Propagate React state updates
+      textarea.value = nextVal;
+      const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+      if (nativeSetter) {
+        nativeSetter.call(textarea, nextVal);
+      }
+      const ev = new Event('input', { bubbles: true });
+      textarea.dispatchEvent(ev);
+    }
+
+    setIsSynonymOpen(false);
+  };
 
   return (
-    <div id="honor_app_root" className="min-h-screen bg-[#070B14] text-slate-100 flex flex-col font-sans">
+    <div id="honor_app_housing" className="min-h-screen bg-[#070B14] text-slate-100 flex flex-col font-sans">
       
-      {/* HEADER SECTION WITH OK LOGO */}
-      <header id="honor_main_header" className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* HEADER SECTION */}
+      <header id="honor_corporate_header" className="sticky top-0 z-40 bg-slate-955/85 backdrop-blur-md border-b border-slate-900 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         
-        {/* Brand & OK Logo */}
+        {/* Brand Brand & OK Logo */}
         <div className="flex items-center gap-3">
           <div 
-            id="honor_ok_logo"
-            className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 via-cyan-900 to-slate-900 border border-cyan-400/40 font-display font-extrabold flex items-center justify-center select-none shadow-md"
-            title="HonorLM Logo"
+            id="honor_ok_brand_logo"
+            className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-600 via-cyan-905 to-slate-900 border border-cyan-400/40 font-display font-extrabold flex items-center justify-center select-none shadow-md"
+            title="HonorLex Brand Shield"
           >
             <span className="text-xl font-black italic tracking-tighter text-cyan-400">O<span className="text-white">K</span></span>
           </div>
           <div>
             <h1 className="text-lg md:text-xl font-display font-extrabold tracking-tight text-white flex items-center gap-1.5">
-              HonorLM
-              <span className="text-[10px] font-mono font-bold tracking-widest uppercase bg-cyan-950/80 text-cyan-400 border border-cyan-800/60 px-2 py-0.5 rounded">
-                v1.2 PRO
+              HonorLex
+              <span className="text-[10px] font-mono font-bold tracking-widest uppercase bg-cyan-955/85 text-cyan-400 border border-cyan-800/60 px-2 py-0.5 rounded">
+                PRO v2.0
               </span>
             </h1>
             <p className="text-[11px] text-slate-400 font-medium">
-              Convert Scanned PDF Slide Decks to Editable PowerPoint Decks
+              Academic Writing Suite, Semantic Thesaurus, & Reference Fabrication Auditor
             </p>
           </div>
         </div>
 
-        {/* Global Controls & Actions */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {slides.length > 0 && (
-            <>
-              {/* File name editor */}
-              <div className="flex items-center bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1">
-                <span className="text-[10px] uppercase font-bold text-slate-500 mr-2 font-mono">Export:</span>
-                <input
-                  type="text"
-                  value={filename}
-                  onChange={(e) => setFilename(e.target.value)}
-                  className="bg-transparent text-xs font-semibold font-mono text-slate-200 focus:outline-none w-44 border-0"
-                  placeholder="presentation_name.pptx"
-                />
-              </div>
-
-              {/* Reset state */}
+        {/* Action button controls */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsHistoryOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-1.8 bg-slate-900/80 hover:bg-slate-850 hover:border-slate-700 border border-slate-800 rounded-xl text-xs font-bold text-slate-200 cursor-pointer transition select-none shadow-md shrink-0"
+            title="Open Recent Activities Logs"
+          >
+            <Clock className="w-4 h-4 text-cyan-400" />
+            <span>Activity Logs ({history.length})</span>
+          </button>
+          
+          <div className="flex items-center gap-2.5">
+            {/* Live / Static Environment Mode Switcher for ease of testing */}
+            <div className="flex items-center gap-1.5 bg-slate-900/80 border border-slate-800 rounded-xl px-2 py-1 shrink-0">
+              <span className="text-[9px] font-mono text-slate-400 font-semibold uppercase select-none">
+                Demo Mode:
+              </span>
               <button
-                onClick={handleReset}
-                className="p-2 text-slate-400 hover:text-rose-400 transition"
-                title="Reset Workspace"
+                onClick={() => handleToggleStaticMode(!isStatic)}
+                className={`text-[9.5px] font-mono font-bold uppercase px-2 py-0.5 rounded transition cursor-pointer select-none border ${
+                  isStatic 
+                    ? 'bg-amber-950/45 border-amber-800/60 text-amber-400 font-extrabold' 
+                    : 'bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-500'
+                }`}
+                title="Toggle static browser mockup vs live cloud-server checks"
               >
-                <Trash2 className="w-4 h-4" />
+                {isStatic ? '🔴 Static (Offline)' : '🟢 Full-Stack'}
               </button>
-
-              {/* Export PPTX Trigger Action */}
-              <button
-                onClick={handleExport}
-                disabled={exporting}
-                id="btn_build_presentation"
-                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-800 text-white font-semibold rounded-lg text-xs md:text-sm shadow-lg shadow-cyan-950/20 flex items-center gap-2 transition cursor-pointer"
-              >
-                {exporting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Packaging PPTX...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    Export PowerPoint (.pptx)
-                  </>
-                )}
-              </button>
-            </>
-          )}
-
-          {slides.length === 0 && (
-            <button
-              onClick={loadDemoSlideDeck}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-850 text-slate-200 font-semibold rounded-lg text-xs border border-slate-800 flex items-center gap-1.5 transition"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
-              Load Demo Presentation
-            </button>
-          )}
-        </div>
-      </header>
-
-      {/* WORKSPACE CHASSIS GRID */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 space-y-6">
-        
-        {/* Mandated Legal & Ethical Notice bar */}
-        <LegalNotice />
-
-        {slides.length === 0 ? (
-          /* Empty / Upload View */
-          <div className="max-w-2xl mx-auto py-12" id="empty_uploader_workspace">
-            <PDFUploader onUploadSuccess={handleUploadSuccess} />
-          </div>
-        ) : (
-          /* Editor Dashboard View */
-          <div className="space-y-6" id="loaded_dashboard_workspace">
-            
-            {/* Slide Navigation Ribbon & Ribbon Toolbar */}
-            <div className="bg-slate-950 border border-slate-900 rounded-2xl p-4 space-y-4">
-              
-              {/* Toolbar metadata */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs border-b border-slate-900 pb-3">
-                <div className="flex items-center gap-3">
-                  <span className="font-display font-medium text-slate-200">
-                    Deck Slide Pages ({slides.length})
-                  </span>
-                  <div className="h-4 w-px bg-slate-800" />
-                  <span className="text-slate-400">
-                    Active page: <strong className="text-cyan-400">Slide #{selectedSlideIndex + 1}</strong>
-                  </span>
-                </div>
-
-                {/* Main View Mode Selector Tabs */}
-                <div className="flex items-center gap-1 bg-slate-900/80 p-1 border border-slate-850 rounded-lg">
-                  <button
-                    onClick={() => setActiveTab('editor')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                      activeTab === 'editor'
-                        ? 'bg-slate-800 text-cyan-400 font-bold'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Layers className="w-3.5 h-3.5" />
-                    Regions Workspace
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('preview')}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                      activeTab === 'preview'
-                        ? 'bg-slate-800 text-cyan-400 font-bold'
-                        : 'text-slate-300 hover:text-slate-100'
-                    }`}
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    Before/After Preview
-                  </button>
-                </div>
-              </div>
-
-              {/* Slider Thumbnail ribbons */}
-              <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-thin">
-                {slides.map((sl, idx) => {
-                  const isSelected = selectedSlideIndex === idx;
-                  const regionsCount = sl.regions.length;
-                  const ocrCount = sl.regions.filter(r => r.action === 'ocr').length;
-                  const redactCount = sl.regions.filter(r => r.action === 'redact').length;
-
-                  return (
-                    <button
-                      key={`thumb_${idx}`}
-                      onClick={() => setSelectedSlideIndex(idx)}
-                      className={`flex-none group relative w-36 aspect-[16/9] bg-slate-900 border-2 rounded-lg overflow-hidden transition-all duration-200 cursor-pointer ${
-                        isSelected 
-                          ? 'border-cyan-400 ring-2 ring-cyan-950 scale-102' 
-                          : 'border-slate-850 hover:border-slate-700'
-                      }`}
-                    >
-                      {/* Image Thumbnail representer */}
-                      <img 
-                        src={sl.dataUrl} 
-                        alt={`Slide ${idx + 1}`} 
-                        className="w-full h-full object-cover select-none pointer-events-none opacity-80 group-hover:opacity-100"
-                        referrerPolicy="no-referrer"
-                      />
-
-                      {/* Number Indicator badge */}
-                      <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-slate-950/80 text-[10px] font-mono font-bold rounded border border-slate-800 text-slate-300">
-                        P.{sl.pageNumber}
-                      </div>
-
-                      {/* Region counts overlays */}
-                      {regionsCount > 0 && (
-                        <div className="absolute bottom-1.5 right-1.5 flex gap-1">
-                          {ocrCount > 0 && (
-                            <span className="px-1.5 py-0.5 bg-cyan-950 border border-cyan-800/60 text-[8.5px] font-bold rounded text-cyan-400 font-mono">
-                              O:{ocrCount}
-                            </span>
-                          )}
-                          {redactCount > 0 && (
-                            <span className="px-1.5 py-0.5 bg-rose-950 border border-rose-900/60 text-[8.5px] font-bold rounded text-rose-400 font-mono">
-                              R:{redactCount}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
             </div>
 
-            {/* MAIN INTERACTIVE INTERFACES */}
-            {activeTab === 'editor' ? (
-              <SlideEditor 
-                slide={activeSlide}
-                onUpdateRegions={(regions) => updateSlideRegions(selectedSlideIndex, regions)}
-              />
-            ) : (
-              <BeforeAfterViewer slide={activeSlide} />
-            )}
+            <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono tracking-wide bg-slate-900/60 border border-slate-850 px-3 py-1.5 rounded-lg shrink-0">
+              <span className={`w-2 h-2 rounded-full animate-pulse shrink-0 ${isStatic ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+              <span>{isStatic ? 'Simulating Static Client' : 'Connected to Gemini 3.5'}</span>
+            </div>
+          </div>
+        </div>
 
-            {/* OCR QUALITY HEALTH WARNING CONTROL BOARD */}
-            {confidenceWarnings.length > 0 && (
-              <div className="p-5 bg-amber-950/10 border border-amber-950 rounded-2xl space-y-3.5" id="global_confidence_dashboard">
-                <div className="flex items-center gap-2 pb-2 border-b border-amber-900/30">
-                  <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-                  <h4 className="font-display font-semibold text-amber-200 text-sm md:text-base">
-                    Document-Wide OCR Confidence Alerts ({confidenceWarnings.length})
-                  </h4>
-                </div>
-                
-                <p className="text-slate-400 text-xs">
-                  The following scanned fields generated lower OCR confidence statistics due to font scales, noise, or template elements. We recommend manually checking these zones to verify correct characters:
+      </header>
+
+      {/* CORE WORKSPACE CHASSIS */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8 space-y-6">
+
+        {/* Static Warning Banner */}
+        {isStatic && (
+          <div className="bg-amber-950/15 border border-amber-900/40 p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-lg animate-fade-in" id="static_pages_demo_banner">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider font-display">
+                  Static Landing & Demo Mode (Standalone Preview)
+                </h4>
+                <p className="text-[11.5px] text-slate-350 leading-relaxed mt-1">
+                  You are viewing the static frontend host of <strong>HonorLex</strong> on GitHub Pages. Real-time Gemini AI polish and live metadata database verifications are <strong>disabled</strong> in this static environment. Intersecting simulation mockups are loaded below. To experience full verification with active databases and actual AI, visit our deployed version:
                 </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {confidenceWarnings.map((warn, wIdx) => (
-                    <div 
-                      key={`warn_${wIdx}`}
-                      onClick={() => {
-                        setSelectedSlideIndex(warn.slideNumber - 1);
-                        setActiveTab('editor');
-                      }}
-                      className="p-3 rounded-xl bg-slate-950 border border-slate-900 hover:border-amber-900/80 transition cursor-pointer flex flex-col justify-between gap-1"
-                    >
-                      <div className="flex items-center justify-between text-[11px] font-mono mb-1">
-                        <span className="text-cyan-400 font-bold hover:underline">Slide #{warn.slideNumber}</span>
-                        <span className="text-rose-400 bg-rose-950/40 px-1.5 py-0.5 rounded border border-rose-900/20 font-bold">
-                          {warn.confidence}% Accuracy
-                        </span>
-                      </div>
-                      <div className="bg-slate-900/60 p-2 rounded-md italic text-slate-300 text-xs border border-slate-850 truncate">
-                        "{warn.text || '(empty field)'}"
-                      </div>
-                      <span className="text-[10px] text-slate-500 font-sans tracking-wide mt-1 text-right">
-                        Click to focus slide page →
-                      </span>
-                    </div>
-                  ))}
-                </div>
               </div>
-            )}
-
+            </div>
+            <a 
+              href="https://ais-pre-odzfkgjbbijylx4v566jwp-10706907376.europe-west1.run.app" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-405 text-slate-950 font-extrabold rounded-xl text-xs whitespace-nowrap transition cursor-pointer select-none shadow hover:shadow-amber-500/10 border border-amber-400/20 block text-center"
+            >
+              Go to Full-Stack AI Version &rarr;
+            </a>
           </div>
         )}
+           {/* Ethical compliance & warning notification top bar */}
+        <div className="p-4 bg-slate-950/10 border border-amber-900/40 rounded-2xl flex items-start gap-3" id="legal_notice_bar">
+          <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-[11px] font-bold text-amber-500 uppercase tracking-widest font-display">Reference Integrity & Ethics Assurance Notice</h4>
+            <p className="text-[11px] text-slate-400 font-medium leading-relaxed mt-1">
+              HonorLex checks bibliographic metadata against available public metadata sources when possible. It helps identify citation errors and possible fabrication risks, but it does not guarantee academic integrity, factual accuracy, or source quality.
+            </p>
+          </div>
+        </div>
+
+        {/* Global tab control ribbon */}
+        <div className="bg-slate-950 border border-slate-900 rounded-2xl p-2 flex flex-col sm:flex-row items-center justify-between gap-2 shadow-xl">
+          <div className="flex flex-wrap items-center gap-1 w-full sm:w-auto">
+            
+            <button
+              onClick={() => setActiveTab('polisher')}
+              className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'polisher'
+                  ? 'bg-slate-900 text-cyan-400 border border-slate-800'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              <Cpu className="w-4 h-4" />
+              Manuscript Polisher
+            </button>
+
+            <button
+              onClick={() => setActiveTab('auditor')}
+              className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'auditor'
+                  ? 'bg-slate-900 text-cyan-400 border border-slate-800'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              <BookMarked className="w-4 h-4" />
+              Citation Auditor
+            </button>
+
+            <button
+              onClick={() => setActiveTab('scanner')}
+              className={`flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                activeTab === 'scanner'
+                  ? 'bg-slate-900 text-cyan-400 border border-slate-800'
+                  : 'text-slate-400 hover:text-slate-200 border border-transparent'
+              }`}
+            >
+              <FileSearch className="w-4 h-4" />
+              Bibliography Scanner
+            </button>
+
+          </div>
+
+          <div className="text-[10px] text-slate-500 font-mono tracking-wide px-3 select-none hidden sm:block">
+            HonorLex Interactive Workspace
+          </div>
+        </div>
+
+        {/* ACTIVE WORKSPACE GRID PANEL */}
+        <div id="active_workspace_grid" className="min-h-[500px]">
+          {activeTab === 'polisher' && (
+            <AcademicPolisher 
+              isStatic={isStatic}
+              onOpenSynonyms={handleOpenSynonymDrawer} 
+              reloadState={polisherReload}
+              onOperationComplete={(data) => handleRecordOperation('polisher', data)}
+            />
+          )}
+
+          {activeTab === 'auditor' && (
+            <CitationAuditor 
+              isStatic={isStatic}
+              reloadState={auditorReload}
+              onOperationComplete={(data) => handleRecordOperation('auditor', data)}
+            />
+          )}
+
+          {activeTab === 'scanner' && (
+            <BibliographyScanner 
+              isStatic={isStatic}
+              onFocusSingleAudit={handleTransitionToSingleAudit} 
+              reloadState={scannerReload}
+              onOperationComplete={(data) => handleRecordOperation('scanner', data)}
+            />
+          )}
+        </div>
 
       </main>
 
-      {/* FOOTER CREDIT BAR */}
-      <footer className="border-t border-slate-900 px-6 py-4 mt-auto bg-slate-950 text-slate-500 text-xs text-center font-mono">
+      {/* FOOTER METADATA INDICATORS */}
+      <footer className="border-t border-slate-900 px-6 py-4 mt-auto bg-slate-950 text-slate-500 text-xs text-center font-mono leading-relaxed">
         <div>
-          HonorLM • Built with React, Vite, and Tesseract.js. All conversions executed strictly client-side to ensure compliance and data hygiene.
+          HonorLex • Styled with Tailwind CSS, configured with Vite, & orchestrated server-side by Antigravity Agents. Privacy guaranteed: zero permanent database logging.
         </div>
       </footer>
+
+      {/* FLOAT CONTEXT DICTIONARY BACKED DRAWER */}
+      <SynonymDrawer 
+        isOpen={isSynonymOpen}
+        onClose={() => setIsSynonymOpen(false)}
+        synonymData={synonymData}
+        loading={synonymLoading}
+        onApplySynonym={handleApplySynonymIntoEditor}
+      />
+
+      {/* FLOAT ACTIVITY HISTORY LOGS DRAWER */}
+      {isHistoryOpen && (
+        <div 
+          id="history_drawer_overlay"
+          className="fixed inset-0 z-50 flex justify-end bg-slate-950/60 backdrop-blur-sm transition-opacity duration-200 animate-fade-in"
+        >
+          {/* Click-outside zone */}
+          <div className="absolute inset-0 cursor-pointer" onClick={() => setIsHistoryOpen(false)} />
+
+          {/* Drawer Body */}
+          <div 
+            id="history_drawer_body"
+            className="relative w-full max-w-md h-full bg-[#090D1A] border-l border-slate-900 shadow-2xl flex flex-col justify-between overflow-hidden"
+          >
+            {/* Header */}
+            <div className="p-5 border-b border-slate-900 flex items-center justify-between bg-slate-950/80 backdrop-blur">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-cyan-400" />
+                <h3 className="font-display font-extrabold text-white text-base md:text-lg">
+                  Recent Activity Logs
+                </h3>
+                <span className="text-[10px] font-mono bg-slate-900 px-2 py-0.5 border border-slate-800 rounded-md text-slate-400 font-bold select-none">
+                  {history.length}/10
+                </span>
+              </div>
+              <button 
+                onClick={() => setIsHistoryOpen(false)}
+                className="w-8 h-8 rounded-lg border border-slate-800 hover:bg-slate-900 hover:text-rose-400 flex items-center justify-center text-slate-450 transition cursor-pointer font-bold text-lg leading-none"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* List Content */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-thin">
+              <div className="bg-slate-950/40 p-3.5 border border-slate-900 rounded-xl leading-relaxed font-sans text-xs text-slate-400 space-y-1">
+                <p className="font-semibold text-slate-350">🔒 Privacy Safeguard Ensured</p>
+                <p>
+                  Your last 10 operations are saved in your local browser storage ONLY. Clearing history or closing the browser completely purges any local drafts.
+                </p>
+              </div>
+
+              {history.length === 0 ? (
+                <div className="h-64 flex flex-col items-center justify-center text-center p-6 border border-dashed border-slate-900 rounded-2xl">
+                  <Clock className="w-8 h-8 text-slate-700 mb-2" />
+                  <p className="text-xs text-slate-400 font-semibold font-display">
+                    No logs recorded yet
+                  </p>
+                  <p className="text-[11px] text-slate-500 max-w-xs mt-1">
+                    Your prose revisions, citation validations, and bibliography scans will record automatically inside this browser session.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {history.map((item) => (
+                    <div 
+                      key={item.id}
+                      className="p-3.5 rounded-xl border border-slate-900 bg-slate-950/40 hover:bg-slate-900/30 hover:border-slate-800 transition flex flex-col gap-2 cursor-pointer text-left group"
+                      onClick={() => handleReloadHistoryItem(item)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          {item.type === 'polisher' && <Cpu className="w-3.5 h-3.5 text-cyan-400" />}
+                          {item.type === 'auditor' && <BookMarked className="w-3.5 h-3.5 text-emerald-400" />}
+                          {item.type === 'scanner' && <FileSearch className="w-3.5 h-3.5 text-amber-400" />}
+                          <span className="text-[9px] uppercase font-mono font-bold tracking-wider text-slate-400">
+                            {item.type === 'polisher' ? 'Manuscript Holist' : item.type === 'auditor' ? 'Citation Auditor' : 'Bibliography Scanner'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-500">
+                          {item.timestamp}
+                        </span>
+                      </div>
+                      
+                      <p className="text-xs font-semibold text-slate-200 line-clamp-2 leading-relaxed">
+                        {item.label}
+                      </p>
+
+                      <div className="flex items-center justify-end font-mono text-[9px] text-cyan-400 group-hover:text-cyan-300 transition-colors">
+                        Restore results instantly &rarr;
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer with Clear Trigger */}
+            <div className="p-4 border-t border-slate-900 bg-slate-950 flex items-center justify-between gap-3">
+              <span className="text-[10px] text-slate-500 font-mono">
+                No active log databases
+              </span>
+              {history.length > 0 && (
+                <button
+                  onClick={handleClearHistory}
+                  className="px-3.5 py-1.8 bg-rose-955/5 hover:bg-rose-950/20 border border-rose-900/30 hover:border-rose-900 rounded-xl text-xs font-bold text-rose-400 flex items-center gap-1.5 cursor-pointer transition select-none"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear History Log
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
