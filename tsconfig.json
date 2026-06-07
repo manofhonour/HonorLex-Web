@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true
   },
-  "include": ["src", "server.ts", "vite.config.ts"]
+  "include": ["src", "api", "server.ts", "vite.config.ts"]
 }

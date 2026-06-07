@@ -33,10 +33,39 @@ interface HistoryItem {
 export default function App() {
   const [activeTab, setActiveTab] = useState<'polisher' | 'auditor' | 'scanner'>('polisher');
   const [isStatic, setIsStatic] = useState<boolean>(false);
+  const [apiHealthError, setApiHealthError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsStatic(isStaticDemoMode());
   }, []);
+
+  useEffect(() => {
+    if (isStatic) {
+      setApiHealthError(null);
+      return;
+    }
+
+    fetch('/api/health')
+      .then(async (res) => {
+        if (res.status === 404) {
+          setApiHealthError("Vercel API function is not deployed. Check /api/[...path].ts and vercel.json.");
+          return;
+        }
+        try {
+          const data = await res.json();
+          if (data && data.hasGeminiKey === false) {
+            setApiHealthError("GEMINI_API_KEY is missing in Vercel Environment Variables.");
+          } else {
+            setApiHealthError(null);
+          }
+        } catch {
+          setApiHealthError("Unrecognized response from server health endpoint.");
+        }
+      })
+      .catch((err) => {
+        console.error("Health check fetch failed:", err);
+      });
+  }, [isStatic]);
 
   const handleToggleStaticMode = (val: boolean) => {
     setStaticDemoMode(val);
@@ -360,7 +389,22 @@ export default function App() {
             </a>
           </div>
         )}
-           {/* Ethical compliance & warning notification top bar */}
+        {/* API Health / Deployment Error Banner */}
+        {apiHealthError && (
+          <div className="bg-red-950/20 border border-red-900/40 p-4 rounded-2xl flex items-start gap-3 shadow-lg animate-fade-in" id="api_health_error_banner">
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider font-display flex items-center gap-1.5">
+                System Environment & API Warning
+              </h4>
+              <p className="text-[11.5px] text-slate-300 leading-relaxed mt-1">
+                {apiHealthError}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Ethical compliance & warning notification top bar */}
         <div className="p-4 bg-slate-950/10 border border-amber-900/40 rounded-2xl flex items-start gap-3" id="legal_notice_bar">
           <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
           <div>
