@@ -173,19 +173,26 @@ export default function App() {
           setApiHealthError("Vercel API function is not deployed. Check /api/[...path].ts and vercel.json.");
           return;
         }
+        if (!res.ok) {
+          setApiHealthError(`Server health check failed with status ${res.status} (${res.statusText})`);
+          return;
+        }
+        const text = await res.text();
         try {
-          const data = await res.json();
+          const data = JSON.parse(text);
           if (data && data.hasGeminiKey === false) {
             setApiHealthError("GEMINI_API_KEY is missing in Vercel Environment Variables.");
           } else {
             setApiHealthError(null);
           }
-        } catch {
-          setApiHealthError("Unrecognized response from server health endpoint.");
+        } catch (parseErr: any) {
+          console.error("Health check response parsing failed:", parseErr, "Text:", text);
+          setApiHealthError(`Unrecognized response format from server health endpoint. Raw: "${text.substring(0, 80)}"`);
         }
       })
       .catch((err) => {
         console.error("Health check fetch failed:", err);
+        setApiHealthError(`Health check connection failed: ${err.message || err}`);
       });
   }, [isStatic]);
 
