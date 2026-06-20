@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
-import { getGeminiClient } from './gemini.ts';
+import { getGeminiClient } from './gemini';
 
 function fallbackPolish(text: string, task: string, tone: string, englishVariety: string) {
   const trimmed = text.trim();

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Type } from '@google/genai';
-import { getGeminiClient } from './gemini.ts';
-import { runLocalCoachScan, generateGenericCritique } from '../lib/coachUtils.ts';
+import { getGeminiClient } from './gemini';
+import { runLocalCoachScan, generateGenericCritique } from '../lib/coachUtils';
 
 export async function handleCoachReview(req: Request, res: Response) {
   try {

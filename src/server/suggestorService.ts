@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Type } from '@google/genai';
-import { getGeminiClient } from './gemini.ts';
+import { getGeminiClient } from './gemini';
 
 // Offline fallback generator for standalone execution or API limit conditions
 export function generateLocalDirections(idea: string, answers: any, lang: 'en' | 'tr'): any[] {

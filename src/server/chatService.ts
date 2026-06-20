@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getGeminiClient } from './gemini.ts';
+import { getGeminiClient } from './gemini';
 
 export async function handleMultiTurnChat(req: Request, res: Response) {
   try {

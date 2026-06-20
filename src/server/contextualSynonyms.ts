@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
-import { getGeminiClient } from './gemini.ts';
+import { getGeminiClient } from './gemini';
 
 function fallbackContextualSynonyms(word: string, surroundingContext: string, tone: string) {
   const wLower = word.toLowerCase();

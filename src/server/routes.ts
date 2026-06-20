@@ -1,17 +1,17 @@
 import { Router } from 'express';
-import { handleVerifyReference, handleScanReferences } from './referenceVerifier.ts';
-import { handlePolish } from './prosePolisher.ts';
-import { handleContextualSynonyms } from './contextualSynonyms.ts';
-import { handleRecommendJournals, handlePeerReview, handleFormatCitationAI } from './copilotService.ts';
-import { handleCoachReview } from './coachService.ts';
-import { handleMultiTurnChat } from './chatService.ts';
+import { handleVerifyReference, handleScanReferences } from './referenceVerifier';
+import { handlePolish } from './prosePolisher';
+import { handleContextualSynonyms } from './contextualSynonyms';
+import { handleRecommendJournals, handlePeerReview, handleFormatCitationAI } from './copilotService';
+import { handleCoachReview } from './coachService';
+import { handleMultiTurnChat } from './chatService';
 import { 
   handleGenerateDirections, 
   handleChangeTitle, 
   handleChangeRQ, 
   handleCheckAlignment,
   handleCheckEltAlignment
-} from './suggestorService.ts';
+} from './suggestorService';
 
 const router = Router();
 

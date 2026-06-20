@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Type } from '@google/genai';
-import { getGeminiClient } from './gemini.ts';
+import { getGeminiClient } from './gemini';
 
 /**
  * 1. Recommend Journals Endpoint
