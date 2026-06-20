@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;605;700;800&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -34,3 +35,90 @@
 .region-highlight:hover {
   filter: brightness(1.1);
 }
+
+/* Custom Font Size Scaling Overrides for Greater Readability (Punto/Yazı Boyutu) */
+.font-scale-large .text-\[9px\],
+.font-scale-large .text-\[9\.5px\],
+.font-scale-large .text-\[10px\],
+.font-scale-large .text-\[11px\],
+.font-scale-large .text-\[11\.5px\] {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+.font-scale-large .text-xs {
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+}
+.font-scale-large .text-sm {
+  font-size: 17px !important;
+  line-height: 1.6 !important;
+}
+.font-scale-large .text-base {
+  font-size: 19px !important;
+  line-height: 1.625 !important;
+}
+.font-scale-large .text-lg {
+  font-size: 21px !important;
+  line-height: 1.5 !important;
+}
+.font-scale-large .text-xl {
+  font-size: 25px !important;
+}
+.font-scale-large .text-2xl {
+  font-size: 29px !important;
+}
+.font-scale-large textarea, 
+.font-scale-large input, 
+.font-scale-large select {
+  font-size: 15px !important;
+}
+.font-scale-large p,
+.font-scale-large span,
+.font-scale-large li,
+.font-scale-large div:not(:has(*)) {
+  line-height: 1.65 !important;
+}
+
+/* Extra Large scale */
+.font-scale-xlarge .text-\[9px\],
+.font-scale-xlarge .text-\[9\.5px\],
+.font-scale-xlarge .text-\[10px\],
+.font-scale-xlarge .text-\[11px\],
+.font-scale-xlarge .text-\[11\.5px\] {
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+}
+.font-scale-xlarge .text-xs {
+  font-size: 17px !important;
+  line-height: 1.65 !important;
+}
+.font-scale-xlarge .text-sm {
+  font-size: 19px !important;
+  line-height: 1.65 !important;
+}
+.font-scale-xlarge .text-base {
+  font-size: 21px !important;
+  line-height: 1.7 !important;
+}
+.font-scale-xlarge .text-lg {
+  font-size: 24px !important;
+  line-height: 1.55 !important;
+}
+.font-scale-xlarge .text-xl {
+  font-size: 28px !important;
+}
+.font-scale-xlarge .text-2xl {
+  font-size: 33px !important;
+}
+.font-scale-xlarge textarea, 
+.font-scale-xlarge input, 
+.font-scale-xlarge select {
+  font-size: 17px !important;
+}
+.font-scale-xlarge p,
+.font-scale-xlarge span,
+.font-scale-xlarge li,
+.font-scale-xlarge div:not(:has(*)) {
+  line-height: 1.75 !important;
+}
+

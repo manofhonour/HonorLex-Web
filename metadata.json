@@ -1,6 +1,6 @@
 {
   "name": "HonorLex",
-  "description": "An academic writing assistant for editing, paraphrasing, restructuring, and correcting English texts.",
-  "requestFramePermissions": [],
+  "description": "An academic writing assistant for ELT (English Language Teaching) and Applied Linguistics, featuring manuscript polishing, citation checking, and ELT Journal matching.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

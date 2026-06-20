@@ -17,7 +17,8 @@ import {
   Flag,
   RotateCcw,
   BookOpen,
-  Scale
+  Scale,
+  EyeOff
 } from 'lucide-react';
 import { PolishResponse, ContextualSynonymResponse, PolishIssue, ChangeExplanation, AcademicRiskNote } from '../types';
 import { simulatePolish } from '../lib/staticDemo';
@@ -27,39 +28,81 @@ interface AcademicPolisherProps {
   onOpenSynonyms: (word: string, phraseContext: string) => void;
   reloadState: any;
   onOperationComplete: (data: any) => void;
+  text: string;
+  setText: (t: string) => void;
+  lang: 'en' | 'tr';
 }
 
-const TONES = [
-  { id: 'academic', label: 'Academic / High-Scholarly' },
-  { id: 'objective', label: 'Objective / Unbiased' },
-  { id: 'confident', label: 'Confident / Persuasive' },
-  { id: 'tentative', label: 'Tentative / Cautious (Hedging)' },
-  { id: 'direct', label: 'Direct / Clear prose' }
-];
+const TONES_DICT: Record<'en' | 'tr', Array<{ id: string; label: string }>> = {
+  en: [
+    { id: 'academic', label: 'Academic / High-Scholarly' },
+    { id: 'objective', label: 'Objective / Unbiased' },
+    { id: 'confident', label: 'Confident / Persuasive' },
+    { id: 'tentative', label: 'Tentative / Cautious (Hedging)' },
+    { id: 'direct', label: 'Direct / Clear prose' }
+  ],
+  tr: [
+    { id: 'academic', label: 'Akademik / Yüksek Araştırmacı' },
+    { id: 'objective', label: 'Objektif / Tarafsız Yaklaşım' },
+    { id: 'confident', label: 'Kendinden Emin / İkna Edici' },
+    { id: 'tentative', label: 'Temkini Koruyan (Hedging)' },
+    { id: 'direct', label: 'Açık / Yalın Dil' }
+  ]
+};
 
-const DIALECTS = [
-  { id: 'us', label: 'American English (US)' },
-  { id: 'uk', label: 'British English (UK)' },
-  { id: 'tr-us', label: 'Translate Turkish draft ➔ US English' },
-  { id: 'tr-uk', label: 'Translate Turkish draft ➔ UK English' }
-];
+const DIALECTS_DICT: Record<'en' | 'tr', Array<{ id: string; label: string }>> = {
+  en: [
+    { id: 'us', label: 'American English (US)' },
+    { id: 'uk', label: 'British English (UK)' },
+    { id: 'tr-us', label: 'Translate Turkish draft ➔ US English' },
+    { id: 'tr-uk', label: 'Translate Turkish draft ➔ UK English' }
+  ],
+  tr: [
+    { id: 'us', label: 'Amerikan İngilizcesi (US)' },
+    { id: 'uk', label: 'Britanya İngilizcesi (UK)' },
+    { id: 'tr-us', label: 'Türkçe Karalamayı Çevir ➔ US İngilizcesi' },
+    { id: 'tr-uk', label: 'Türkçe Karalamayı Çevir ➔ UK İngilizcesi' }
+  ]
+};
 
-const TASKS = [
-  { id: 'grammar', label: 'Spelling & Grammar Fix', icon: SpellCheck, description: 'Correct errors, list issues.' },
-  { id: 'rewrite', label: 'Scholarly Rewrite', icon: Award, description: 'Enhance academic flow and cohesion.' },
-  { id: 'paraphrase', label: 'Smart Paraphrase', icon: RotateCcw, description: 'Recast phrases with multi-level variance.' },
-  { id: 'formalize', label: 'Formalize Register', icon: Scale, description: 'Elevate casual speech to research grades.' },
-  { id: 'simplify', label: 'Simplify & Clarify', icon: BookOpen, description: 'Enhance readability without data loss.' },
-  { id: 'explain', label: 'Deconstruct & Explain', icon: Sliders, description: 'Rewrite & explain detail stylistic edits.' },
-  { id: 'human', label: 'Organic Human Flow', icon: Sparkles, description: 'Vary rhythm, remove typical AI clichés.' },
-  { id: 'shorten', label: 'Compress Narrative', icon: FileText, description: 'Deliver high punch in concise text.' },
-  { id: 'expand', label: 'Elaborate Safely', icon: ChevronRight, description: 'Flesh out logical claims safely.' }
-];
+const TASKS_DICT: Record<'en' | 'tr', Array<{ id: string; label: string; icon: any; description: string }>> = {
+  en: [
+    { id: 'grammar', label: 'Spelling & Grammar Fix', icon: SpellCheck, description: 'Correct errors, list issues.' },
+    { id: 'rewrite', label: 'Scholarly Rewrite', icon: Award, description: 'Enhance academic flow and cohesion.' },
+    { id: 'paraphrase', label: 'Smart Paraphrase', icon: RotateCcw, description: 'Recast phrases with multi-level variance.' },
+    { id: 'formalize', label: 'Formalize Register', icon: Scale, description: 'Elevate casual speech to research grades.' },
+    { id: 'simplify', label: 'Simplify & Clarify', icon: BookOpen, description: 'Enhance readability without data loss.' },
+    { id: 'slip-slop', label: 'Slip-Slop', icon: EyeOff, description: 'Reduce formulaic & over-polished academic phrasing.' },
+    { id: 'explain', label: 'Deconstruct & Explain', icon: Sliders, description: 'Rewrite & explain detail stylistic edits.' },
+    { id: 'human', label: 'Organic Human Flow', icon: Sparkles, description: 'Vary rhythm, remove typical AI clichés.' },
+    { id: 'shorten', label: 'Compress Narrative', icon: FileText, description: 'Deliver high punch in concise text.' },
+    { id: 'expand', label: 'Elaborate Safely', icon: ChevronRight, description: 'Flesh out logical claims safely.' }
+  ],
+  tr: [
+    { id: 'grammar', label: 'Yazım & Dilbilgisi Düzelt', icon: SpellCheck, description: 'Hataları bul ve listele.' },
+    { id: 'rewrite', label: 'Akademik Yeniden Yazım', icon: Award, description: 'Bilimsel akıcılık ve tutarlılığı artır.' },
+    { id: 'paraphrase', label: 'Anlam Korumalı Değişim', icon: RotateCcw, description: 'İfadeleri anlam kaybı olmadan çeşitlendir.' },
+    { id: 'formalize', label: 'Seviyeyi Resmileştir', icon: Scale, description: 'Sıradan dili araştırma düzeyine yükselt.' },
+    { id: 'simplify', label: 'Basitleştir & Netleştir', icon: BookOpen, description: 'Akıcılığı sade ama eksiksiz hale getir.' },
+    { id: 'slip-slop', label: 'Slip-Slop Temizleyici', icon: EyeOff, description: 'Tekrarlayan ve aşırı yapay şablonları kaldır.' },
+    { id: 'explain', label: 'Çözümle & Açıkla', icon: Sliders, description: 'Değişikliklerin gerekçesini detaylıca göster.' },
+    { id: 'human', label: 'Doğal İnsan Akışı', icon: Sparkles, description: 'Yapay zeka kokan kalıpları ve ritimleri kaldır.' },
+    { id: 'shorten', label: 'Metni Kısalt', icon: FileText, description: 'Fikirleri daha özcü ve vurucu bir dille yaz.' },
+    { id: 'expand', label: 'Güvenle Detaylandır', icon: ChevronRight, description: 'Mantıksal iddiaları akademik kanıtlarla aç.' }
+  ]
+};
 
-export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState, onOperationComplete }: AcademicPolisherProps) {
-  const [text, setText] = useState<string>('');
+export default function AcademicPolisher({ 
+  isStatic, 
+  onOpenSynonyms, 
+  reloadState, 
+  onOperationComplete,
+  text,
+  setText,
+  lang
+}: AcademicPolisherProps) {
   const [selectedTask, setSelectedTask] = useState<string>('rewrite');
-  const [selectedDialect, setSelectedDialect] = useState<string>('us');
+  const [selectedDialect, setSelectedDialect] = useState<string>('uk');
   const [selectedTone, setSelectedTone] = useState<string>('academic');
   const [paraphraseMode, setParaphraseMode] = useState<string>('balanced');
   
@@ -73,6 +116,24 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
   const [activeDiagnosticTab, setActiveDiagnosticTab] = useState<'issues' | 'changes' | 'risks'>('changes');
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const wordCount = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
+  const charCount = text.length;
+  // Dynamic sentence splitter
+  const sentenceCount = text.trim() ? text.trim().split(/[.!?]+(?:\s+|$)/).filter(s => s.trim().length > 0).length : 0;
+
+  const getEstimatedReadingTime = (words: number) => {
+    if (words === 0) return '0s';
+    const wpm = 180; // Scholar standard reading pace
+    const totalSeconds = Math.round((words / wpm) * 60);
+    if (totalSeconds < 10) return '< 10s';
+    if (totalSeconds < 60) return `~${totalSeconds}s`;
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    if (secs === 0) return `~${mins} min`;
+    return `~${mins}m ${secs}s`;
+  };
+  const readingTime = getEstimatedReadingTime(wordCount);
 
   // Sync internal states with historical reloads
   useEffect(() => {
@@ -177,6 +238,19 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
     }
   };
 
+  const handleApplyAlternative = (altText: string, altIdx: number) => {
+    if (!polishResult) return;
+    const oldRevisedText = polishResult.revised_text;
+    const updatedAlternatives = [...polishResult.alternatives];
+    updatedAlternatives[altIdx] = oldRevisedText;
+    
+    setPolishResult({
+      ...polishResult,
+      revised_text: altText,
+      alternatives: updatedAlternatives
+    });
+  };
+
   const handleClear = () => {
     setText('');
     setPolishResult(null);
@@ -207,10 +281,11 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
 
   const loadDemoText = () => {
     const demos: Record<string, string> = {
-      grammar: "The results of this study clearly shows that AI systems are much more better than classic human workers. Furthermore, it dont make any stupid typos because of fatiguing issues.",
-      rewrite: "The primary purpose of this paper is to explore how neural systems learn. We did various runs, and we found that if you add more weights, the network gets pretty smart, pretty fast.",
-      paraphrase: "A high volume of researchers currently claim that deep neural learning models representing massive parameter sets can mimic organic cortical synapses efficiently.",
-      tr_us: "Modern yapay zeka modelleri akademik makaleleri çok hızlı bir şekilde analiz edebilir. Ancak bazı durumlarda, uydurma kaynaklar (plagiarism) üreterek araştırmacıları yanıltabilir.",
+      grammar: "The participants of this study who does the EFL examinations clearly shows that translanguaging strategies are much more better than single language policy. Furthermore, it dont make any stupid anxiety for English language learners.",
+      rewrite: "The primary purpose of this paper is to explore how L2 learners acquire syntax. We did various classroom runs, and we found that if you add collaborative tasks, the student gets pretty smart, pretty fast at speaking target languages.",
+      paraphrase: "A high volume of researchers currently claim that integrating gamified mobile applications into English as a Foreign Language (EFL) classrooms can enhance vocabulary retention.",
+      tr_us: "Yabancı dil olarak İngilizce öğretiminde (EFL), öğrencilerin anadillerini (L1) sınıf içinde stratejik olarak kullanmaları (translanguaging) öğrenme motivasyonunu artırır. Ancak bazı öğretmenler hala bunun sınıf içi hedef dili olumsuz etkileyeceğine inanmaktadır.",
+      'slip-slop': "Overall, the quantitative results show that using MAXQDA for analyzing the qualitative findings sheds light on how SLA students learn. Taken together, it plays a crucial role and this suggests robust insights."
     };
     
     const targetKey = selectedDialect.startsWith('tr') ? 'tr_us' : selectedTask;
@@ -230,20 +305,20 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
           <div className="flex items-center justify-between border-b border-slate-900 pb-3">
             <span className="text-xs uppercase font-mono font-bold text-slate-400 tracking-wider flex items-center gap-1.5 matches-guide">
               <FileText className="w-4 h-4 text-cyan-400" />
-              Original Manuscript Draft
+              {lang === 'tr' ? "Orijinal Yazı Taslağı" : "Original Manuscript Draft"}
             </span>
             <div className="flex gap-2">
               <button 
                 onClick={loadDemoText}
                 className="text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg transition shrink-0 cursor-pointer"
               >
-                Load Demo Script
+                {lang === 'tr' ? "Örnek Yazı Yükle" : "Load Demo Script"}
               </button>
               {text && (
                 <button 
                   onClick={handleClear}
                   className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/20 rounded-lg transition cursor-pointer"
-                  title="Clear Editor"
+                  title={lang === 'tr' ? "Metni Temizle" : "Clear Editor"}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -255,7 +330,7 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
           <div className="p-3 bg-slate-900/60 border border-slate-900 rounded-xl flex items-start gap-2.5 text-[11px] text-slate-400 font-sans">
             <AlertCircle className="w-4 h-4 text-cyan-500 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
-              Your text is processed through the AI model to generate suggestions. Do not paste sensitive personal data.
+              {lang === 'tr' ? "Metniniz öneri üretmek amacıyla yapay zeka modeline iletilir. Lütfen kişisel veya hassas verilerinizi yapıştırmayın." : "Your text is processed through the AI model to generate suggestions. Do not paste sensitive personal data."}
             </p>
           </div>
 
@@ -269,12 +344,44 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
               rows={11}
               id="raw_manuscript_draft_input"
               className="w-full bg-slate-950/60 border border-slate-900 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 rounded-xl p-4 text-xs font-sans text-slate-200 leading-relaxed placeholder-slate-600 focus:outline-none resize-y selection:bg-cyan-500/30 selection:text-cyan-100"
-              placeholder="Paste your research manuscript paragraphs or drafts here... Double-click any word or phrase in this pane to activate the contextual academic suggestion engine."
+              placeholder={lang === 'tr' ? "Akademik makale taslaklarınızı veya paragraflarınızı buraya yapıştırın... Bağlamsal akademik eş anlamlı sözlük yardımcısını açmak için bu paneldeki herhangi bir kelimeye çift tıklayabilirsiniz." : "Paste your research manuscript paragraphs or drafts here... Double-click any word or phrase in this pane to activate the contextual academic suggestion engine."}
             />
             
             {/* Inline Helpful Hint badge */}
-            <div className="absolute bottom-3 right-3 text-[10px] text-slate-500 font-mono tracking-wide bg-slate-950/80 px-2.5 py-1 rounded border border-slate-900 pointer-events-none select-none">
-              {text.trim().split(/\s+/).filter(Boolean).length} words | double-click words for synonyms
+            <div className="absolute bottom-3 right-3 text-[9px] text-slate-550 font-mono tracking-wider bg-slate-950/90 px-2 py-0.5 rounded border border-slate-900/80 pointer-events-none select-none uppercase">
+              {lang === 'tr' ? "kelimelere çift tıklayarak eş anlamlı arayın" : "double-click words for synonym helper"}
+            </div>
+          </div>
+
+          {/* Real-Time Document Statistics & Reading Time Panel */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1.5" id="manuscript_realtime_counters">
+            <div className="bg-slate-900/40 border border-slate-900/80 hover:border-slate-800 p-2.5 rounded-xl text-center space-y-1 transition duration-200 shadow-inner">
+              <span className="text-[9px] uppercase font-mono font-bold text-slate-500 tracking-wider block">{lang === 'tr' ? "Kelime" : "Words"}</span>
+              <span className="text-sm font-mono font-black text-cyan-400" id="counter_word_val">
+                {wordCount.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="bg-slate-900/40 border border-slate-900/80 hover:border-slate-800 p-2.5 rounded-xl text-center space-y-1 transition duration-200 shadow-inner">
+              <span className="text-[9px] uppercase font-mono font-bold text-slate-500 tracking-wider block">{lang === 'tr' ? "Karakter" : "Characters"}</span>
+              <span className="text-sm font-mono font-semibold text-slate-300" id="counter_char_val">
+                {charCount.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="bg-slate-900/40 border border-slate-900/80 hover:border-slate-800 p-2.5 rounded-xl text-center space-y-1 transition duration-200 shadow-inner">
+              <span className="text-[9px] uppercase font-mono font-bold text-slate-500 tracking-wider block">{lang === 'tr' ? "Cümle" : "Sentences"}</span>
+              <span className="text-sm font-mono font-semibold text-slate-300" id="counter_sentence_val">
+                {sentenceCount.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="bg-slate-900/40 border border-slate-900/80 hover:border-slate-800 p-2.5 rounded-xl text-center space-y-1 transition duration-200 shadow-inner">
+              <span className="text-[9px] uppercase font-mono font-bold text-slate-500 tracking-wider block">{lang === 'tr' ? "Tahmini Okuma" : "Est. Reading Time"}</span>
+              <span className="text-sm font-mono font-medium text-indigo-400 flex items-center justify-center gap-1.5" id="counter_read_time_val">
+                <BookOpen className="w-3.5 h-3.5 text-indigo-400/95 shrink-0" />
+                {readingTime}
+              </span>
             </div>
           </div>
         </div>
@@ -284,7 +391,7 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
           <div className="flex items-center gap-2 border-b border-slate-900 pb-3">
             <Sliders className="w-4 h-4 text-cyan-400" />
             <h3 className="font-display font-extrabold text-white text-xs md:text-sm uppercase tracking-wide">
-              Scholarly Tuning & Actions
+              {lang === 'tr' ? "Bilimsel Ayarlar & Aksiyonlar" : "Scholarly Tuning & Actions"}
             </h3>
           </div>
 
@@ -294,7 +401,7 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
             {/* Target Dialect Box */}
             <div className="space-y-1.5">
               <label id="dialect_combo_label" className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                Target Language Variety
+                {lang === 'tr' ? "Hedef Dil Varyasyonu" : "Target Language Variety"}
               </label>
               <select
                 id="dialect_variety_dropdown"
@@ -302,8 +409,8 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
                 onChange={(e) => setSelectedDialect(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-sans text-slate-300 focus:outline-none focus:border-cyan-500/50 cursor-pointer"
               >
-                {DIALECTS.map((dial) => (
-                  <option key={dial.id} value={dial.id}>
+                {DIALECTS_DICT[lang].map((dial) => (
+                  <option key={dial.id} value={dial.id} className="bg-slate-950 text-white font-sans">
                     {dial.label}
                   </option>
                 ))}
@@ -313,7 +420,7 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
             {/* Target Academic Register Tone Box */}
             <div className="space-y-1.5">
               <label id="tone_combo_label" className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-                Target Style Register & Tone
+                {lang === 'tr' ? "Hedef Biçim Seviyesi & Ton" : "Target Style Register & Tone"}
               </label>
               <select
                 id="tone_dropdown"
@@ -321,8 +428,8 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
                 onChange={(e) => setSelectedTone(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-sans text-slate-300 focus:outline-none focus:border-cyan-500/50 cursor-pointer"
               >
-                {TONES.map((t) => (
-                  <option key={t.id} value={t.id}>
+                {TONES_DICT[lang].map((t) => (
+                  <option key={t.id} value={t.id} className="bg-slate-950 text-white font-sans">
                     {t.label}
                   </option>
                 ))}
@@ -334,7 +441,7 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
           {selectedTask === 'paraphrase' && (
             <div className="bg-slate-900/40 p-4 border border-slate-900 rounded-xl space-y-2 mt-2 animation-ease-in-out">
               <span className="text-[10px] font-bold font-mono uppercase tracking-wider text-slate-500">
-                Paraphrase Mode Preferences
+                {lang === 'tr' ? "Açımlama Tercihleri" : "Paraphrase Mode Preferences"}
               </span>
               <div className="flex gap-2">
                 {['conservative', 'balanced', 'creative'].map((m) => (
@@ -347,7 +454,7 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
                         : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    {m}
+                    {m === 'conservative' ? (lang === 'tr' ? 'Koruyucu' : 'Conservative') : m === 'balanced' ? (lang === 'tr' ? 'Dengeli' : 'Balanced') : (lang === 'tr' ? 'Yaratıcı' : 'Creative')}
                   </button>
                 ))}
               </div>
@@ -357,16 +464,17 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
           {/* Task Action Selector Grid with scannable badges */}
           <div className="space-y-2">
             <span id="task_selector_label" className="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-mono">
-              Core Styling Operations
+              {lang === 'tr' ? "Temel Düzenleme & İyileştirme" : "Core Styling Operations"}
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {TASKS.map((t) => {
+              {TASKS_DICT[lang].map((t) => {
                 const Icon = t.icon;
                 const isSelected = selectedTask === t.id;
                 return (
                   <button
                     key={t.id}
                     onClick={() => setSelectedTask(t.id)}
+                    title={t.id === 'slip-slop' ? (lang === 'tr' ? "Anlamı korurken mekanik ve aşırı süslü akademik kalıpları seyreltir." : "Reduce formulaic and over-polished academic phrasing while preserving your meaning.") : t.description}
                     className={`p-3 rounded-xl border text-left transition-all duration-150 cursor-pointer ${
                       isSelected
                         ? 'border-cyan-400/80 bg-cyan-950/10 text-slate-150 shadow shadow-cyan-950/30'
@@ -497,17 +605,27 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
                     >
                       <div className="flex items-center justify-between text-[10px] font-mono mb-1">
                         <span className="text-slate-450 font-bold capitalize">Variation #{aIdx + 1}</span>
-                        <button
-                          onClick={() => handleCopyText(alt, true, aIdx)}
-                          className="text-slate-500 hover:text-cyan-400 transition cursor-pointer"
-                          title="Copy alternative"
-                        >
-                          {copiedAltIdx === aIdx ? (
-                            <Check className="w-3 h-3 text-emerald-400" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleApplyAlternative(alt, aIdx)}
+                            className="px-2 py-0.5 bg-cyan-950/45 hover:bg-cyan-900 border border-cyan-800/50 hover:border-cyan-500 text-cyan-400 text-[9.5px] font-bold rounded-lg transition cursor-pointer flex items-center gap-1 select-none font-sans"
+                            title="Bu varyasyonu ana sonuç ekranına uygula"
+                          >
+                            <Sparkles className="w-2.5 h-2.5" />
+                            Apply / Uygula
+                          </button>
+                          <button
+                            onClick={() => handleCopyText(alt, true, aIdx)}
+                            className="text-slate-500 hover:text-cyan-400 transition cursor-pointer p-1 rounded hover:bg-slate-900"
+                            title="Copy alternative"
+                          >
+                            {copiedAltIdx === aIdx ? (
+                              <Check className="w-3 h-3 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                       <p className="text-[11px] text-slate-350 leading-relaxed font-sans">{alt}</p>
                     </div>
@@ -573,10 +691,10 @@ export default function AcademicPolisher({ isStatic, onOpenSynonyms, reloadState
                           
                           {/* Diff representation layout */}
                           <div className="grid grid-cols-2 gap-2 text-[10px] font-sans">
-                            <div className="bg-rose-955/5 border border-rose-950/20 rounded p-1.5 line-through text-rose-400/90 truncate" title={ch.original}>
+                            <div className="bg-rose-950/20 border border-rose-900/30 rounded p-1.5 line-through text-rose-450 truncate" title={ch.original}>
                               {ch.original || '(empty)'}
                             </div>
-                            <div className="bg-emerald-955/5 border border-emerald-950/20 rounded p-1.5 text-emerald-450 font-semibold truncate" title={ch.revised}>
+                            <div className="bg-emerald-950/20 border border-emerald-900/30 rounded p-1.5 text-emerald-400 font-semibold truncate" title={ch.revised}>
                               {ch.revised}
                             </div>
                           </div>

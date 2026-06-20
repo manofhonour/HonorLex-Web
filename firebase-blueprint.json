@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Basic user registration metadata.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of user profile creation"
+        }
+      },
+      "required": ["email", "createdAt"]
+    },
+    "SavedOutput": {
+      "title": "Saved Output",
+      "description": "Saved academic manuscript polish, references or coach items.",
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "description": "ISO timestamp of when the output was saved"
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of tool (e.g. polish, checker, coach)"
+        },
+        "label": {
+          "type": "string",
+          "description": "Display label or category"
+        },
+        "title": {
+          "type": "string",
+          "description": "User defined or system generated title"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes or annotations"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Firestore server timestamp of creation"
+        },
+        "data": {
+          "type": "object",
+          "description": "Polished text blocks or list configurations"
+        }
+      },
+      "required": ["timestamp", "type", "label", "data", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Register of registered students matching their Firebase authentication auth ID."
+    },
+    "/users/{userId}/saved_outputs/{outputId}": {
+      "schema": "SavedOutput",
+      "description": "Individual polished excerpts, citation matches, or ELT coach directions saved by the parent user."
+    }
+  }
+}
