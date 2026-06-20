@@ -24,7 +24,7 @@ const startBackend = async () => {
     app.use(vite.middlewares);
   }
 
-  const port = parseInt(process.env.PORT || '3000', 10);
+  const port = 3000;
   app.listen(port, '0.0.0.0', () => {
     console.log(`[HonorLex Server Code] Running at http://localhost:${port} | Env: ${process.env.NODE_ENV || 'development'}`);
   });
